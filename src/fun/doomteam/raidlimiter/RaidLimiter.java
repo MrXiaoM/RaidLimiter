@@ -4,15 +4,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.google.common.collect.Lists;
+
 public class RaidLimiter extends JavaPlugin{
-	RaidListener listener;
-	RaidData data;
-	RaidPlaceholder papi;
-	enum Mode{
+	public static enum Mode{
 		PLAYER, SERVER;
 		
 		public static Mode getMode(String value) {
@@ -25,8 +26,13 @@ public class RaidLimiter extends JavaPlugin{
 			return nullValue;
 		}
 	}
-	protected Mode mode;
+	
+	RaidListener listener;
+	RaidData data;
+	RaidPlaceholder papi;
+	Mode mode;
 	protected List<String> runCommands = new ArrayList<>();
+	protected List<String> cooldownCommands = new ArrayList<>();
 	public void onEnable() {
 		this.saveDefaultConfig();
 		this.reloadConfig();
@@ -43,11 +49,17 @@ public class RaidLimiter extends JavaPlugin{
 		if(this.getConfig().contains("commands")) {
 			this.runCommands = this.getConfig().getStringList("commands");
 		}
+		this.cooldownCommands.clear();
+		if(this.getConfig().contains("cooldown-commands")) {
+			this.cooldownCommands = this.getConfig().getStringList("cooldown-commands");
+		}
+		if(this.data == null) this.data = new RaidData(this);
 		this.data.reloadConfig();
 	}
 	
 	public void saveConfig() {
 		this.data.saveConfig();
+		if(papi != null && papi.isRegistered()) papi.unregister();
 	}
 	
 	public void onDisable() {
@@ -57,53 +69,27 @@ public class RaidLimiter extends JavaPlugin{
 		}
 	}
 	
+	public String lang(String key) {
+		return ChatColor.translateAlternateColorCodes('&', this.getConfig().getString("message." + key, "翻译错误: message." + key).replace("\\n", "\n").replace("\\r", "\r"));
+	}
+	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if(!sender.isOp()) return true;
 		if(args.length == 1 && args[0].equalsIgnoreCase("reload")) {
 			this.saveDefaultConfig();
 			this.reloadConfig();
-			sender.sendMessage("§a配置文件已重载");
-		}
-		boolean server = mode.equals(Mode.SERVER);
-		if(args.length >= (server ? 4 : 5) && args[0].equalsIgnoreCase("set")) {
-			String player = server ? "" : args[1];
-			int offset = server ? 0 : 1;
-			int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-			try {
-				year = Integer.parseInt(args[offset + 1]);
-				month = Integer.parseInt(args[offset + 2]);
-				day = Integer.parseInt(args[offset + 3]);
-				if(args.length > offset + 4) {
-					hour = Integer.parseInt(args[offset + 4]);
-					if(args.length > offset + 5) {
-						minute = Integer.parseInt(args[offset + 5]);
-						if(args.length > offset + 6) {
-							second = Integer.parseInt(args[offset + 6]);
-						}
-					}
-				}
-			}catch(Throwable t) {
-				sender.sendMessage("§c参数里存在无效的整数");
-				return true;
-			}
-			LocalDateTime time = LocalDateTime.of(year, month, day, hour, minute, second);
-			if(server) {
-				data.setNextDate(time);
-			}
-			else {
-				data.setPlayerNextDate(player, time);
-			}
-			sender.sendMessage("§a已设置" + (server ? "全服" : "玩家") +" §e" + player + " §a在 §e" + year + "年" + month + "月" + day + "日 " + hour + ":" + minute + ":" + second + " §a前都不可触发袭击" );
+			sender.sendMessage(lang("reload"));
 			return true;
 		}
-		if(args.length == (mode.equals(Mode.SERVER) ? 2 : 3) && args[0].equalsIgnoreCase("set")) {
-			String player = args[1];
-			int[] timeArray = getTimeFromString(args[2]);
-			if(timeArray == null) {
-				sender.sendMessage("§c参数里存在无效的整数");
+		boolean server = mode.equals(Mode.SERVER);
+		if(args.length == (server ? 2 : 3) && args[0].equalsIgnoreCase("set")) {
+			boolean now = (server ? args[1] : args[2]).equalsIgnoreCase("now");
+			int[] timeArray = now ? null : getTimeFromString(server ? args[1] : args[2]);
+			if(!now && timeArray == null) {
+				sender.sendMessage(lang("not-integer"));
 				return true;
 			}
-			LocalDateTime time = data.getPlayerNextTime(player);
+			LocalDateTime time = now ? LocalDateTime.now() : (server ? data.getNextTime() : data.getPlayerNextTime(args[1]));
 			if(time == null) time = LocalDateTime.now();
 			int year = time.getYear();
 			int month = time.getMonthValue();
@@ -111,46 +97,88 @@ public class RaidLimiter extends JavaPlugin{
 			int hour = time.getHour();
 			int minute = time.getMinute();
 			int second = time.getSecond();
-			if(timeArray[0] > 0) year = timeArray[0];
-			if(timeArray[1] > 0) month = timeArray[1];
-			if(timeArray[2] > 0) day = timeArray[2];
-			if(timeArray[3] > 0) hour = timeArray[3];
-			if(timeArray[4] > 0) minute = timeArray[4];
-			if(timeArray[5] > 0) second = timeArray[5];
-			LocalDateTime newTime = LocalDateTime.of(year, month, day, hour, minute, second);
+			if(!now) {
+				if(timeArray[0] > 0) year = timeArray[0];
+				if(timeArray[1] > 0) month = timeArray[1];
+				if(timeArray[2] > 0) day = timeArray[2];
+				if(timeArray[3] > 0) hour = timeArray[3];
+				if(timeArray[4] > 0) minute = timeArray[4];
+				if(timeArray[5] > 0) second = timeArray[5];
+			}
+			LocalDateTime newTime = now ? time : LocalDateTime.of(year, month, day, hour, minute, second);
 			if(server) {
-				data.setNextDate(newTime);
+				data.setNextDate(newTime).saveConfig();
 			}
 			else {
-				data.setPlayerNextDate(player, newTime);
+				data.setPlayerNextDate(args[1], newTime).saveConfig();
 			}
-			sender.sendMessage("§a已设置" + (server ? "全服" : ("玩家§e " + player + " §a")) + "在 §e" + year + "年" + month + "月" + day + "日 " + hour + ":" + minute + ":" + second + " §a前都不可触发袭击" );
+
+			String type = server ? lang("type-server") : lang("type-player").replace("%player%", args[1]);
+			String timeStr = year + "年" + month + "月" + day + "日 " + hour + ":" + minute + ":" + second;
+			
+			sender.sendMessage(lang("set").replace("%type%", type).replace("%time%", timeStr));
 			return true;
 		}
-		if(args.length == (server ? 2 : 3) && args[0].equalsIgnoreCase("add")) {
-			String player = args[1];
-			int[] timeArray = getTimeFromString(args[2]);
+		if(args.length == (server ? 2 : 3) && args[0].equalsIgnoreCase("plus")) {
+			int[] timeArray = getTimeFromString(server ? args[1] : args[2]);
 			if(timeArray == null) {
-				sender.sendMessage("§c参数里存在无效的整数");
+				sender.sendMessage(lang("not-integer"));
 				return true;
 			}
-			LocalDateTime time = data.getPlayerNextTime(player);
+			LocalDateTime time = server ? data.getNextTime() : data.getPlayerNextTime(args[1]);
 			if(time == null) time = LocalDateTime.now();
-			time.plusSeconds(timeArray[5]);
-			time.plusMinutes(timeArray[4]);
-			time.plusHours(timeArray[3]);
-			time.plusDays(timeArray[2]);
-			time.plusMinutes(timeArray[1]);
-			time.plusYears(timeArray[0]);
+			time = time.plusSeconds(timeArray[5])
+					.plusMinutes(timeArray[4])
+					.plusHours(timeArray[3])
+					.plusDays(timeArray[2])
+					.plusMinutes(timeArray[1])
+					.plusYears(timeArray[0]);
 			if(server) {
-				data.setNextDate(time);
+				data.setNextDate(time).saveConfig();
 			}
 			else {
-				data.setPlayerNextDate(player, time);
+				data.setPlayerNextDate(args[1], time).saveConfig();
 			}
-			sender.sendMessage("§a已将" + (server ? "全服" : ("玩家§e " + player + " §a")) +"的触发袭击冷却时间增加 §e" + timeToChinese(timeArray));
+
+			String type = server ? lang("type-server") : lang("type-player").replace("%player%", args[1]);
+			sender.sendMessage(lang("plus").replace("%type%", type).replace("%time%", timeToChinese(timeArray)));
 			return true;
 		}
+		if(args.length == (server ? 2 : 3) && args[0].equalsIgnoreCase("minus")) {
+			int[] timeArray = getTimeFromString(server ? args[1] : args[2]);
+			if(timeArray == null) {
+				sender.sendMessage(lang("not-integer"));
+				return true;
+			}
+			LocalDateTime time = server ? data.getNextTime() : data.getPlayerNextTime(args[1]);
+			if(time == null) time = LocalDateTime.now();
+			time = time.minusSeconds(timeArray[5])
+					.minusMinutes(timeArray[4])
+					.minusHours(timeArray[3])
+					.minusDays(timeArray[2])
+					.minusMinutes(timeArray[1])
+					.minusYears(timeArray[0]);
+			if(server) {
+				data.setNextDate(time).saveConfig();
+			}
+			else {
+				data.setPlayerNextDate(args[1], time).saveConfig();
+			}
+
+
+			String type = server ? lang("type-server") : lang("type-player").replace("%player%", args[1]);
+			sender.sendMessage(lang("minus").replace("%type%", type).replace("%time%", timeToChinese(timeArray)));
+			return true;
+		}
+		if(args.length > 1 && args[0].equalsIgnoreCase("cmd") && (sender instanceof Player)) {
+			String command = args[1];
+			for(int i = 2; i < args.length; i++) {
+				command += " " + args[i];
+			}
+			Util.runCommands(Lists.newArrayList(command), (Player) sender);
+			return true;
+		}
+		sender.sendMessage(lang("help-mode-" + mode.name().toLowerCase()));
 		return true;
 	}
 	
@@ -173,7 +201,6 @@ public class RaidLimiter extends JavaPlugin{
 					temp += String.valueOf(c);
 				}
 				else {
-					temp = "";
 					switch(c) {
 				    	case 'y': year = Integer.parseInt(temp); break;
 				    	case 'M': month = Integer.parseInt(temp); break;
@@ -183,12 +210,17 @@ public class RaidLimiter extends JavaPlugin{
 				    	case 's': second = Integer.parseInt(temp); break;
 				    	default: break;
 					}
+					temp = "";
 				}
 			}
 		}catch(Throwable t) {
 			return null;
 		}
 		return new int[] { year, month, day, hour, minute, second};
+	}
+	
+	public Mode getMode() {
+		return mode;
 	}
 	
 	public RaidData getData() {

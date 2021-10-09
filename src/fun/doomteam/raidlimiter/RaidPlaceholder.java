@@ -2,7 +2,11 @@ package fun.doomteam.raidlimiter;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 
+import java.time.LocalDateTime;
+
 import org.bukkit.OfflinePlayer;
+
+import fun.doomteam.raidlimiter.RaidLimiter.Mode;
 
 public class RaidPlaceholder extends PlaceholderExpansion {
 	private final RaidLimiter plugin;
@@ -20,7 +24,12 @@ public class RaidPlaceholder extends PlaceholderExpansion {
 	}
 
 	public String onRequest(OfflinePlayer player, String identifier) {
-		// TODO
+		if(identifier.equalsIgnoreCase("can_raid")) {
+			return this.plugin.getData().isRaidAccess(player.getName()) ? "yes" : "no";
+		}
+		if(identifier.equalsIgnoreCase("remaining")) {
+			return Util.between(LocalDateTime.now(), plugin.getMode().equals(Mode.SERVER) ? this.plugin.getData().getNextTime() : this.plugin.getData().getPlayerNextTime(player.getName()), true);
+		}
 		return identifier;
 	}
 

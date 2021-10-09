@@ -1,10 +1,11 @@
 name: RaidLimiter
 main: fun.doomteam.raidlimiter.RaidLimiter
 version: 1.0
+api-version: 1.15
 author: DoomsdaySociety
 softdepend:
 - PlaceholderAPI
 commands:
   raidlimiter:
     descrption: main command
-    aliases: [rl]
+    aliases: [raid]

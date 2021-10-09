@@ -18,6 +18,7 @@ public class RaidListener implements Listener{
 		Player player = event.getPlayer();
 		if(!plugin.getData().isRaidAccess(player.getName())) {
 			event.setCancelled(true);
+			Util.runCommands(plugin.cooldownCommands, player);
 			return;
 		}
 		Util.runCommands(plugin.runCommands, player);

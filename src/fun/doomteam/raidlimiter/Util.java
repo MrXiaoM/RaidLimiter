@@ -3,6 +3,8 @@ package fun.doomteam.raidlimiter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,15 +22,7 @@ public class Util {
 	private static boolean isUsePlaceholderAPI = false;
 	
 	public static boolean init() {
-		try {
-			if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-				Class.forName("me.clip.placeholderapi.PlaceholderAPI");
-				isUsePlaceholderAPI = true;
-			}
-		}catch(Throwable t) {
-			isUsePlaceholderAPI = false;
-		}
-		return isUsePlaceholderAPI;
+		return isUsePlaceholderAPI = (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null);
 	}
 	
 	public static void sendTellraw(Player player, String msg) {
@@ -150,6 +144,10 @@ public class Util {
 	}
 
 	public static void sendTitle(Player player, String type, int in, int time, int out, String msg) {
+		if(nms.startsWith("v1_17")) {
+			sendTitle_1_17(player, type, in, time, out, msg);
+			return;
+		}
 		try {
 			Class<?> classPacket = Class.forName("net.minecraft.server." + nms + ".PacketPlayOutTitle");
 			Class<?> classPacketAction = classPacket.getDeclaredClasses()[0];
@@ -167,6 +165,10 @@ public class Util {
 			t.printStackTrace();
 		}
 	}
+
+	public static void sendTitle_1_17(Player player, String type, int in, int time, int out, String msg) {
+		player.sendMessage("The 'title' prefix is not support in 1.17 now. Please use '/title' command instead.");
+	}
 	
 	private static List<String> handlePlaceholder(Player player, List<String> str) {
 		List<String> list = new ArrayList<>();
@@ -177,7 +179,7 @@ public class Util {
 	}
 	
 	private static String handlePlaceholder(Player player, String str) {
-		if(!isUsePlaceholderAPI) return ChatColor.translateAlternateColorCodes('&', str);
+		if(!isUsePlaceholderAPI) return ChatColor.translateAlternateColorCodes('&', str.replace("%player%", player.getName()));
 		return PlaceholderAPI.setPlaceholders(player, str);
 	}
 	
@@ -219,6 +221,7 @@ public class Util {
 					continue;
 				}
 				if (cmd.startsWith("subtitle:")) {
+					sendTitle(player, "TITLE", 10, 40, 10, "");
 					sendTitle(player, "SUBTITLE", 10, 40, 10, cmd.substring(9));
 					continue;
 				}
@@ -252,5 +255,43 @@ public class Util {
 		} catch (Throwable t) {
 			return nullValue;
 		}
+	}
+	
+	/** 
+	 * 计算两个时间距离多久并转成玩家能看懂的中文
+	 * 两个时间不需要按先后顺序传入参数
+	 * 
+	 * 计算部分代码来自 DoomsdaySociety 的闭源插件 DoomsdayEssentials 中的 TimeUtil
+	 * 
+	 * @author MrXiaoM
+	 * 
+	 * @param one 第一个时间
+	 * @param two 第二个时间
+	 * @return 时间文本
+	 */
+	public static String between(LocalDateTime one, LocalDateTime two, boolean ignoreZero) {
+		if (one == null || two == null || one.isEqual(two)) return "0秒";
+		LocalDateTime timeBefore = one.isBefore(two) ? one : two;
+		LocalDateTime timeAfter = one.isAfter(two) ? one : two;
+
+		LocalDateTime between = LocalDateTime.from(timeBefore);
+		long years = between.until(timeAfter, ChronoUnit.YEARS);
+		between = between.plusYears(years);
+		long months = between.until(timeAfter, ChronoUnit.MONTHS);
+		between = between.plusMonths(months);
+		long days = between.until(timeAfter, ChronoUnit.DAYS);
+		between = between.plusDays(days);
+		long hours = between.until(timeAfter, ChronoUnit.HOURS);
+		between = between.plusHours(hours);
+		long minutes = between.until(timeAfter, ChronoUnit.MINUTES);
+		between = between.plusMinutes(minutes);
+		long seconds = between.until(timeAfter, ChronoUnit.SECONDS);
+		String time = seconds + "秒";
+		if(ignoreZero && minutes != 0) time = minutes + "分" + time;
+		if(ignoreZero && hours != 0) time = hours + "时" + time;
+		if(ignoreZero && days != 0) time = days + "天" + time;
+		if(ignoreZero && months != 0) time = months + "月" + time;
+		if(ignoreZero && years != 0) time = years + "年" + time;
+		return time;
 	}
 }

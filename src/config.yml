@@ -1,3 +1,8 @@
+#################################################
+# RaidLimiter 配置文件
+# https://github.com/DoomsdaySociety/RaidLimiter
+#################################################
+
 # 冷却模式
 # SERVER - 默认设置，全服共用一个冷却，即一人触发掠夺，全服都不能再触发掠夺直到冷却结束
 # PLAYER - 每个玩家分开冷却，即一人触发掠夺，他在冷却结束前不能触发掠夺，但其他还没冷却的玩家可以触发
@@ -14,31 +19,57 @@ mode: SERVER
 # title:标题消息
 # subtitle:副标题消息
 # 我懒得写，所以标题和副标题都是0.5秒淡出淡入，持续2秒
+# 如果要标题和副标题一起显示，请务必把副标题放在标题前面执行，否则标题会被吞
+#
 # 命令支持PAPI变量
+# 避免不安装PAPI无法使用PLAYER模式，%player% 会自动替换成玩家名
+#
 ###### 模式提示 ######
 # 在模式为 SERVER 时
-# 增加时间: console:raidlimiter add 时间
-# 设置时间: console:raidlimiter set 时间
+# 增加时间: console:raidlimiter plus 时间
+# 设置时间: console:raidlimiter set 时刻
 # 在模式为 PLAYER 时
-# 增加时间: console:raidlimiter add 玩家名 时间
-# 设置时间: console:raidlimiter set 玩家名 时间
-# 玩家名可用PAPI变量 %player_name% 代替
+# 增加时间: console:raidlimiter plus 玩家名 时间
+# 设置时间: console:raidlimiter set 玩家名 时刻
 # 时间格式为 年y月M日d时h分m秒s
+# 特殊的，在set命令中可以使用 now 代表现在时刻，如 console:raidlimiter set now
 # 不要相应参数后面的字母为不设置或者增加为0个单位
+#
 ###### 设置时间的例子 ######
 # 设置时间只会设置已填入的参数的值
 # 不会覆盖没有填入的参数
 # 原时间: 1970年1月1日08:00:00
 # 填入时间: 3d9m
-# 设置后时间: 1970年1月3日08:08:00
+# 设置后时间: 1970年1月3日08:09:00
+#
 ###### 增加时间的例子 ######
 # 原时间: 1970年1月1日08:00:00
 # 填入时间 1d
 # 设置后时间: 1970年1月2日08:00:00
+#
 ###### 例子:添加一天冷却时间，但是是次日六点冷却结束而不是冷却24小时 ######
-# console:raidlimiter add 1d
+# console:raidlimiter set now
+# console:raidlimiter plus 1d
 # console:raidlimiter set 6h0m0s
+#
 ###### 最后，敬请发挥你的想象力 ######
 ###### 避免有人不看上面那么长的帮助，在这里再提醒一遍，记得仔细看注释 ######
 commands:
-- 'console:raidlimiter add 2h'
+- 'console:raidlimiter set now'
+- 'console:raidlimiter plus 2h'
+
+# 玩家被阻止触发袭击时执行的命令
+# 和上面的 commands 一样是列表，一样的编写规则
+cooldown-commands: []
+
+# 消息
+message:
+  reload: '&a配置文件已重载'
+  not-integer: '&c参数里存在无效的整数'
+  type-player: '玩家 &e%player% &a'
+  type-server: '全服'
+  set: '&a已设置%type%在 &e%time% &a前都不可触发袭击'
+  plus: '&a已将%type%的触发袭击冷却时间增加 &e%time%'
+  minus: '&a已将%type%的触发袭击冷却时间减少 &e%time%'
+  help-mode-server: '&c&l袭击限制 &e帮助命令\n&a/raidlimiter set <时刻> &b设置全服下次可触发袭击的时刻\n&a/raidlimiter plus <时间> &b在原来可触发袭击的时刻的基础上增加时间\n&a/raidlimiter minus <时间> &b在原来可触发袭击的时刻的基础上减少时间\n&a/raidlimiter reload &b重载配置文件'
+  help-mode-player: '&c&l袭击限制 &e帮助命令\n&a/raidlimiter set <玩家> <时刻> &b设置某人下次可触发袭击的时刻\n&a/raidlimiter plus <玩家> <时间> &b在某人原来可触发袭击的时刻的基础上增加时间\n&a/raidlimiter minus <玩家> <时间> &b在某人原来可触发袭击的时刻的基础上减少时间\n&a/raidlimiter reload &b重载配置文件'

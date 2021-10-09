@@ -35,20 +35,15 @@ public class RaidData {
 	public LocalDateTime getPlayerNextTime(String player) {
 		String[] timeArray = this.config.getString("players." + player, "").split("-");
 		int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-		if(timeArray.length < 3) return null;
+		if(timeArray.length < 6) return null;
 		try {
 			year = Integer.parseInt(timeArray[0]);
 			month = Integer.parseInt(timeArray[1]);
 			day = Integer.parseInt(timeArray[2]);
-			if(timeArray.length > 3) {
-				hour = Integer.parseInt(timeArray[3]);
-				if(timeArray.length > 4) {
-					minute = Integer.parseInt(timeArray[4]);
-					if(timeArray.length > 5) {
-						second = Integer.parseInt(timeArray[5]);
-					}
-				}
-			}
+			hour = Integer.parseInt(timeArray[3]);
+			minute = Integer.parseInt(timeArray[4]);
+			second = Integer.parseInt(timeArray[5]);
+			
 			return LocalDateTime.of(year, month, day, hour, minute, second);
 		}catch(Throwable t) {
 			t.printStackTrace();
@@ -59,20 +54,14 @@ public class RaidData {
 	public LocalDateTime getNextTime() {
 		String[] timeArray = this.config.getString("server", "").split("-");
 		int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-		if(timeArray.length < 3) return null;
+		if(timeArray.length < 6) return null;
 		try {
 			year = Integer.parseInt(timeArray[0]);
 			month = Integer.parseInt(timeArray[1]);
 			day = Integer.parseInt(timeArray[2]);
-			if(timeArray.length > 3) {
-				hour = Integer.parseInt(timeArray[3]);
-				if(timeArray.length > 4) {
-					minute = Integer.parseInt(timeArray[4]);
-					if(timeArray.length > 5) {
-						second = Integer.parseInt(timeArray[5]);
-					}
-				}
-			}
+			hour = Integer.parseInt(timeArray[3]);
+			minute = Integer.parseInt(timeArray[4]);
+			second = Integer.parseInt(timeArray[5]);
 			return LocalDateTime.of(year, month, day, hour, minute, second);
 		}catch(Throwable t) {
 			t.printStackTrace();
