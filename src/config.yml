@@ -20,6 +20,9 @@ mode: SERVER
 # subtitle:副标题消息
 # 我懒得写，所以标题和副标题都是0.5秒淡出淡入，持续2秒
 # 如果要标题和副标题一起显示，请务必把副标题放在标题前面执行，否则标题会被吞
+# 1.1 版本新增
+# break when count smaller than:数量
+# 在count小于填入的数量时中断执行后面的命令
 #
 # 命令支持PAPI变量
 # 避免不安装PAPI无法使用PLAYER模式，%player% 会自动替换成玩家名
@@ -55,6 +58,16 @@ mode: SERVER
 ###### 最后，敬请发挥你的想象力 ######
 ###### 避免有人不看上面那么长的帮助，在这里再提醒一遍，记得仔细看注释 ######
 commands:
+# 1.1 新增
+# 这一行可以增加count的数量
+- 'console:raidlimiter count plus 1'
+# 下面这条新增命令的作用:
+# 在count小于不等于2的时候结束执行命令，它下面的命令都不执行了
+# 如果count大于或等于2的时候这一行无效，不执行任何东西，但下面的命令会被执行
+# 可以利用这个特性，做到触发n次袭击后才设置冷却
+# 该功能建议来自 @Azaths
+- 'break when count smaller than:2'
+# 原1.0
 - 'console:raidlimiter set now'
 - 'console:raidlimiter plus 2h'
 
@@ -73,3 +86,8 @@ message:
   minus: '&a已将%type%的触发袭击冷却时间减少 &e%time%'
   help-mode-server: '&c&l袭击限制 &e帮助命令\n&a/raidlimiter set <时刻> &b设置全服下次可触发袭击的时刻\n&a/raidlimiter plus <时间> &b在原来可触发袭击的时刻的基础上增加时间\n&a/raidlimiter minus <时间> &b在原来可触发袭击的时刻的基础上减少时间\n&a/raidlimiter reload &b重载配置文件'
   help-mode-player: '&c&l袭击限制 &e帮助命令\n&a/raidlimiter set <玩家> <时刻> &b设置某人下次可触发袭击的时刻\n&a/raidlimiter plus <玩家> <时间> &b在某人原来可触发袭击的时刻的基础上增加时间\n&a/raidlimiter minus <玩家> <时间> &b在某人原来可触发袭击的时刻的基础上减少时间\n&a/raidlimiter reload &b重载配置文件'
+  # 1.1 新增
+  set-count: '&a已设置%type%的触发次数为 &e%count%'
+  plus-count: '&a已将%type%的触发次数增加 &e%count%'
+  minus-count: '&a已将%type%的触发次数减少 &e%count%'
+  

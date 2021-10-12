@@ -27,13 +27,26 @@ public class RaidData {
 		return this;
 	}
 	public RaidData setPlayerNextDate(String player, LocalDateTime time) {
-		this.config.set("players." + player, time.getYear() + "-" + time.getMonthValue() + "-" + time.getDayOfMonth() 
+		this.config.set("players." + player + ".next-time", time.getYear() + "-" + time.getMonthValue() + "-" + time.getDayOfMonth() 
 			+ "-" + time.getHour() + "-" + time.getMinute() + "-" + time.getSecond());
 		return this;
 	}
-	
+	public RaidData setPlayerCount(String player, int count) {
+		this.config.set("players." + player + ".count", count);
+		return this;
+	}
+	public int getPlayerCount(String player) {
+		return this.config.getInt("players." + player + ".count", 0);
+	}
+	public RaidData setCount(int count) {
+		this.config.set("count", count);
+		return this;
+	}
+	public int getCount() {
+		return this.config.getInt("count", 0);
+	}
 	public LocalDateTime getPlayerNextTime(String player) {
-		String[] timeArray = this.config.getString("players." + player, "").split("-");
+		String[] timeArray = this.config.getString("players." + player + ".next-time", "").split("-");
 		int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
 		if(timeArray.length < 6) return null;
 		try {
@@ -82,6 +95,32 @@ public class RaidData {
 				return this;
 			}
 			this.config = YamlConfiguration.loadConfiguration(configFile);
+			boolean flagUpdate = false;
+			for(String key : this.config.getConfigurationSection("players").getKeys(false)) {
+				if(this.config.isString("players." + key)) {
+					flagUpdate = true;
+					break;
+				}
+			}
+			if(flagUpdate) {
+				plugin.getLogger().config("发现旧的配置文件格式(1.0)，正在兼容到新版插件(1.1+)");
+				YamlConfiguration old = (YamlConfiguration) this.config;
+				this.config = new YamlConfiguration();
+				for(String key : old.getKeys(false)) {
+					if(key.equals("players")) {
+						for(String key1 : old.getConfigurationSection("players").getKeys(false)) {
+							if(!old.isConfigurationSection("players." + key1)) {
+								this.config.set("players." + key1 + ".next-time", old.get("players." + key1));
+								continue;
+							}
+							this.config.set("players." + key1, old.getConfigurationSection("players." + key1));
+						}
+						continue;
+					}
+					this.config.set(key, old.get(key));
+				}
+				this.saveConfig();
+			}
 		} catch(Throwable t) {
 			t.printStackTrace();
 		}

@@ -15,6 +15,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 
+import fun.doomteam.raidlimiter.RaidLimiter.Mode;
 import me.clip.placeholderapi.PlaceholderAPI;
 
 public class Util {
@@ -183,10 +184,20 @@ public class Util {
 		return PlaceholderAPI.setPlaceholders(player, str);
 	}
 	
-	public static void runCommands(List<String> commands, Player player) {
+	public static boolean runCommands(List<String> commands, Player player) {
+		boolean flag = true;
 		if (player == null || commands == null || commands.isEmpty())
-			return;
+			return false;
 		for (String cmd : handlePlaceholder(player, commands)) {
+			if (cmd.startsWith("break when count smaller than:")) {
+				int target = Util.strToInt(cmd.substring(30), -1);
+				boolean server = RaidLimiter.getInstance().getMode().equals(Mode.SERVER);
+				if(target < (server ? RaidLimiter.getInstance().getData().getCount() 
+						: RaidLimiter.getInstance().getData().getPlayerCount(player.getName()))) {
+					flag = false;
+					break;
+				}
+			}
 			if (cmd.startsWith("console:")) {
 				Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.substring(8));
 				continue;
@@ -227,6 +238,7 @@ public class Util {
 				}
 			}
 		}
+		return flag;
 	}
 
 	public static void clearPlayerEffects(Player player) {
@@ -287,11 +299,11 @@ public class Util {
 		between = between.plusMinutes(minutes);
 		long seconds = between.until(timeAfter, ChronoUnit.SECONDS);
 		String time = seconds + "秒";
-		if(ignoreZero && minutes != 0) time = minutes + "分" + time;
-		if(ignoreZero && hours != 0) time = hours + "时" + time;
-		if(ignoreZero && days != 0) time = days + "天" + time;
-		if(ignoreZero && months != 0) time = months + "月" + time;
-		if(ignoreZero && years != 0) time = years + "年" + time;
+		if(!ignoreZero || minutes != 0) time = minutes + "分" + time;
+		if(!ignoreZero || hours != 0) time = hours + "时" + time;
+		if(!ignoreZero || days != 0) time = days + "天" + time;
+		if(!ignoreZero || months != 0) time = months + "月" + time;
+		if(!ignoreZero || years != 0) time = years + "年" + time;
 		return time;
 	}
 }
